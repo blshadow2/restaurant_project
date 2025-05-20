@@ -21,6 +21,8 @@ def create_driver():
     options.add_argument("--disable-blink-features=AutomationControlled")
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
     options.add_experimental_option('useAutomationExtension', False)
+    options.add_experimental_option("detach", True)
+
     return webdriver.Chrome(options=options)
 
 def collect_data(source, location, ct_id=None, ct_pw=None):
@@ -101,9 +103,6 @@ def collect_data(source, location, ct_id=None, ct_pw=None):
         time.sleep(1)
         driver.find_element(By.XPATH, '//*[@id="header"]/div/div/div/input').send_keys(location)
         time.sleep(2)
-        driver.find_element(By.XPATH, '//*[@id="main"]/div/div[1]/div').click()
-        time.sleep(3)
-
         try:
             element = WebDriverWait(driver, 10).until(
                 EC.presence_of_element_located((By.XPATH, '//*[@id="main"]/div/div[1]/div/div/div[1]/span'))
@@ -116,58 +115,60 @@ def collect_data(source, location, ct_id=None, ct_pw=None):
             driver.quit()
             return
 
+        driver.find_element(By.XPATH, '//*[@id="main"]/div/div[1]/div').click()
+        time.sleep(3)
+
+       
         reviews = {}
         for i in range(restaurant_count):
+            
+            name_elem = driver.find_element(By.XPATH, f'//*[@id="virtual_{i}"]/div/div/div[1]/div/div/div[1]/div[1]/p')
+            name = name_elem.text
+            print(f"[{i+1}] {name}")
+            elme=driver.find_element(By.XPATH, '//*[@id="virtual_{}"]'.format(i))
+        # 1) 클릭할 요소를 찾고
+        # 2) 화면 안에 보이도록 스크롤 (부모 컨테이너가 virtualized list)
+            driver.execute_script("arguments[0].scrollIntoView({block: 'center'});",elme)
+            driver.find_element(By.XPATH, f'//*[@id="virtual_{i}"]').click()
+            time.sleep(2)
+
             try:
-                name_elem = driver.find_element(By.XPATH, f'//*[@id="virtual_{i}"]/div/div/div[1]/div/div/div[1]/div[1]/p')
-                name = name_elem.text.strip()
-                print(f"[{i+1}] {name}")
-                driver.find_element(By.XPATH, f'//*[@id="virtual_{i}"]').click()
-                time.sleep(2)
+                driver.find_element(By.XPATH, '//*[@id="popup"]/div/div/div/div/div/button[1]').click()
+            except:
+                pass
 
+            tab_nav = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.XPATH, '//*[@id="wrapperDiv"]/nav/ul'))
+            )
+            tabs = tab_nav.find_elements(By.TAG_NAME, 'li')
+            for tab in tabs:
+                if "리뷰" in tab.text:
+                    tab.click()
+                    break
+            time.sleep(1)
+
+            comments = []
+            for j in range(1, 11):
                 try:
-                    driver.find_element(By.XPATH, '//*[@id="popup"]/div/div/div/div/div/button[1]').click()
+                    rating = driver.find_element(By.XPATH, f'//*[@id="main"]/div[2]/div/div/div/div[{j}]/article/div[1]/div[2]/div/a/div').text
+                    comment = driver.find_element(By.XPATH, f'//*[@id="main"]/div[2]/div/div/div/div[{j}]/article/div[2]/div[2]/p').text
+                    if len(comment.strip()) >= 10:
+                        comments.append((rating, comment))
                 except:
-                    pass
+                    break
 
-                tab_nav = WebDriverWait(driver, 10).until(
-                    EC.presence_of_element_located((By.XPATH, '//*[@id="wrapperDiv"]/nav/ul'))
-                )
-                tabs = tab_nav.find_elements(By.TAG_NAME, 'li')
-                for tab in tabs:
-                    if "리뷰" in tab.text:
-                        tab.click()
-                        break
-                time.sleep(1)
-
-                review_parent = WebDriverWait(driver, 5).until(
-                    EC.presence_of_element_located((By.CSS_SELECTOR, '#main > div._7xsxe00'))
-                )
-                comments = []
-                for j in range(1, 11):
-                    try:
-                        rating = driver.find_element(By.XPATH, f'//*[@id="main"]/div[2]/div/div/div/div[{j}]/article/div[1]/div[2]/div/a/div').text
-                        comment = driver.find_element(By.XPATH, f'//*[@id="main"]/div[2]/div/div/div/div[{j}]/article/div[2]/div[2]/p').text
-                        if len(comment.strip()) >= 10:
-                            comments.append((rating, comment))
-                    except:
-                        break
-
-                reviews[name] = comments
-                driver.back()
-                time.sleep(1)
-                driver.back()
-                time.sleep(1)
-            except Exception as e:
-                print(f"❌ [{i+1}] 음식점 오류: {e}")
-                continue
+            reviews[name] = comments
+            driver.back()
+            time.sleep(1)
+            driver.back()
+            time.sleep(1)
+           
 
         with open(f'reviews_CT_{location}.json', 'w', encoding='utf-8') as f:
             json.dump(reviews, f, ensure_ascii=False, indent=4)
         print("✅ 캐치테이블 저장 완료")
 
-    driver.quit()
-    print("🛑 드라이버 종료 완료")
+    
 
 if __name__ == '__main__':
     source = input("사이트를 입력하세요 (naver/catchtable): ").strip().lower()
