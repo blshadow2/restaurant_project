@@ -4,7 +4,7 @@ import re
 import math
 import requests
 from pathlib import Path
-from edit_json import load_and_merge_json
+from merging_restaurant import load_and_merge_json
 from config import top_CATEGORIES as TOP_CATEGORIES, subcategory_ALIASES as SUBCATEGORY_ALIASES, subcategory_WEIGHTS as DEFAULT_WEIGHTS, prefs, current_address
 from typing import Tuple, Optional
 
