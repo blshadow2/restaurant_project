@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>카테고리 선호도 입력</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;700;900&display=swap" rel="stylesheet">
+  <style>
+    html, body {
+      height: auto;
+      margin: 0;
+      background: linear-gradient(135deg, #fffdf9, #ffe8e5);
+      font-family: 'Pretendard', sans-serif;
+    }
+
+    .logo {
+      position: absolute;
+      top: 1.2rem;
+      left: 1.5rem;
+    }
+
+    .logo img {
+      height: 56px;
+      object-fit: contain;
+      transition: transform 0.3s ease, filter 0.3s ease;
+    }
+
+    .logo img:hover {
+      transform: scale(1.1);
+      filter: brightness(1.1);
+    }
+
+    .container-box {
+      max-width: 1000px;
+      margin: 3rem auto 2rem auto;
+      background-color: #FAF2EF;
+      padding: 2.5rem;
+      border-radius: 1.5rem;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    .section-title {
+      text-align: center;
+      font-size: 2.5rem;
+      font-weight: 900;
+      color: #D88282;
+      margin-bottom: 2rem;
+    }
+
+    .grid-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      justify-content: space-between;
+    }
+
+    .grid-item {
+      flex: 0 0 48%;
+      background-color: #fff;
+      border-radius: 0.75rem;
+      padding: 1.2rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 90px;
+    }
+
+    .category-name {
+      font-size: 1.3rem;
+      font-weight: 600;
+      white-space: nowrap;
+      margin-right: 0.5rem;
+      margin-left: 2.6rem;
+    }
+
+    .btn-group {
+      flex-wrap: nowrap;
+    }
+
+    .btn-outline-primary {
+      border-color: #D88282;
+      color: #D88282;
+      padding: 0.45rem 0.85rem;
+      font-size: 1rem;
+      transition: all 0.2s ease-in-out;
+    }
+
+    .btn-outline-primary:hover,
+    .btn-check:checked + .btn-outline-primary {
+      background-color: #D88282;
+      border-color: #D88282;
+      color: white;
+    }
+
+    .submit-btn {
+      background-color: #D88282;
+      border: none;
+      font-size: 1.2rem;
+      padding: 0.8rem;
+      transition: background-color 0.2s ease;
+      width: 100%;
+      margin-top: 2rem;
+      font-weight: 700;
+      border-radius: 0.6rem;
+    }
+
+    .submit-btn:hover {
+      background-color: #c36c6c;
+    }
+
+    @media (max-width: 768px) {
+      .grid-item {
+        flex: 0 0 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="logo">
+    <a href="/">
+      <img src="{{ url_for('static', filename='mascot.png') }}" alt="로고">
+    </a>
+  </div>
+
+  <div class="container-box">
+    <h2 class="section-title">카테고리별 선호도 입력</h2>
+    <form id="prefsForm">
+      <div class="grid-row">
+        {% set categories = [
+          ('한식', 'hansik'),
+          ('중식', 'jungsik'),
+          ('일식', 'ilsik'),
+          ('양식', 'yangsik'),
+          ('카페·베이커리', 'cafebakery'),
+          ('주점', 'bar'),
+          ('아시아음식', 'asiafood'),
+          ('기타', 'etc')
+        ] %}
+
+        {% for cat_name, cat_id in categories %}
+        <div class="grid-item">
+          <div class="category-name">{{ cat_name }}</div>
+          <div class="btn-group" role="group" aria-label="{{ cat_id }}">
+            {% for i in range(1,6) %}
+            <input type="radio" class="btn-check" name="{{ cat_id }}" id="{{ cat_id }}-{{ i }}" value="{{ i }}" autocomplete="off" {% if i == 3 %}checked{% endif %}>
+            <label class="btn btn-outline-primary" for="{{ cat_id }}-{{ i }}">{{ i }}</label>
+            {% endfor %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      <button type="button" onclick="submitPrefs()" class="btn submit-btn">제출</button>
+    </form>
+  </div>
+
+  <script>
+    function submitPrefs() {
+      const categories = {
+        "한식": "hansik",
+        "중식": "jungsik",
+        "일식": "ilsik",
+        "양식": "yangsik",
+        "카페·베이커리": "cafebakery",
+        "주점": "bar",
+        "아시아음식": "asiafood",
+        "기타": "etc"
+      };
+
+      const prefs = {};
+      for (const [koreanName, idName] of Object.entries(categories)) {
+        const selected = document.querySelector(`input[name="${idName}"]:checked`);
+        if (selected) {
+          prefs[koreanName] = parseInt(selected.value);
+        } else {
+          alert(`${koreanName} 카테고리의 선호도를 선택해주세요.`);
+          return;
+        }
+      }
+
+      fetch('/save_prefs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(prefs)
+      })
+      .then(res => res.text())
+      .then(() => window.location.href = "/result")
+      .catch(err => alert("오류 발생: " + err));
+    }
+  </script>
+</body>
+</html>
